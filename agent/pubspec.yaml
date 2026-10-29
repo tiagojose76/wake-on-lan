@@ -1,0 +1,10 @@
+name: wol_agent
+description: Agente HTTP mínimo para desligar/reiniciar o PC Windows pela LAN.
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.5.0
+
+dev_dependencies:
+  test: ^1.25.0
