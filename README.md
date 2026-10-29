@@ -10,18 +10,14 @@ Ligue, desligue, reinicie e veja o status do PC pelo celular, na rede de casa.
 | [2. Instalar o agente](#passo-2-instalar-o-agente-no-pc) | Programinha que recebe os comandos no PC | ~10 min |
 | [3. Configurar o app](#passo-3-configurar-o-app) | Preencher IP, MAC e token no celular | ~2 min |
 
-Requisito: celular e PC no **mesmo roteador**. Pela internet não funciona.
+Antes de começar, confira:
+
+- [ ] Celular e PC no **mesmo roteador** (pela internet não funciona).
+- [ ] PC ligado ao roteador por **cabo de rede**.
+- [ ] **Flutter** instalado no PC.
+- [ ] Celular com **Depuração USB** ativa e conectado ao PC pelo cabo USB.
 
 ---
-
-## O que o app faz
-
-| Botão | Ação |
-| --- | --- |
-| **Ligar** | Acorda o PC desligado |
-| **Desligar** | Desliga o PC (pede confirmação) |
-| **Reiniciar** | Reinicia o PC (pede confirmação) |
-| **Status** | Mostra **Online** ou **Offline**, atualiza a cada 5 segundos |
 
 ## Como funciona
 
@@ -32,9 +28,11 @@ Requisito: celular e PC no **mesmo roteador**. Pela internet não funciona.
 | **Ligar** | "magic packet" (Wake-on-LAN) | placa de rede | o PC liga |
 | **Desligar** | pedido + token | agente | o PC desliga |
 | **Reiniciar** | pedido + token | agente | o PC reinicia |
-| **Status** | pedido + token | agente | **Online** se o agente responder, **Offline** se não |
+| **Status** | pedido + token | agente | **Online** se o agente responder, **Offline** se não (atualiza a cada 5 segundos) |
 
-- **Placa de rede**: escuta o "magic packet" mesmo com o PC desligado.
+Desligar e Reiniciar pedem confirmação antes.
+
+- **Placa de rede**: escuta o "magic packet" mesmo com o PC desligado. Sinal de que ela está escutando: a **luz da porta de rede fica acesa** com o PC desligado.
 - **Agente**: programa que roda no PC e só obedece a quem manda o **token** certo (uma senha).
 
 ---
@@ -43,24 +41,32 @@ Requisito: celular e PC no **mesmo roteador**. Pela internet não funciona.
 
 Tempo: ~15 minutos. O que falha se você pular:
 
-- Sem o **1a** ou o item 1-2 do **1b**: o botão **Ligar** não funciona.
-- Sem a **rede Privada** (1b, item 3) ou sem o **IP** (1c): **nenhum** botão funciona.
+- Sem o **1a** ou os itens 1 a 3 do **1b**: o botão **Ligar** não funciona.
+- Sem a **rede Privada** (1b, item 4) ou sem o **IP** (1c): **nenhum** botão funciona.
 
 ### 1a. Cabo e BIOS (~5 min, exige reiniciar)
 
 1. Ligue o PC no **cabo de rede**. Acordar pelo Wi-Fi quase nunca funciona. O celular pode ficar no Wi-Fi.
 2. Reinicie e entre na BIOS/UEFI (tecla `Del` ou `F2` na inicialização).
-3. Ative **Wake on LAN**. Às vezes o nome é *Power On By PCI-E*.
-4. Se existir **ErP/EuP Ready**, desative.
-5. Salve e saia.
+3. Ative **Wake on LAN** (às vezes o nome é *Power On By PCI-E*) e desative **ErP/EuP Ready**, se existir.
+
+   Placas **ASUS**: aperte `F7` (Advanced Mode) e vá em **Advanced > APM Configuration**:
+   - **Power On By PCI-E** = **Enabled** (vem desligado de fábrica)
+   - **ErP Ready** = **Disabled**
+
+4. Salve e saia (`F10`).
 
 ### 1b. Windows (~5 min)
 
-1. **Gerenciador de Dispositivos > Adaptadores de rede > placa de cabo > Propriedades**:
-   - aba **Avançado**: ative **Wake on Magic Packet**;
-   - aba **Gerenciamento de Energia**: marque **Permitir que este dispositivo acorde o computador** e **Permitir apenas um magic packet...**.
-2. **Painel de Controle > Opções de Energia > Escolher a função dos botões de energia**: desmarque **Ligar inicialização rápida**.
-3. **Configurações > Rede e Internet > Ethernet**: marque **Rede privada**.
+1. **Gerenciador de Dispositivos > Adaptadores de rede > placa de cabo > Propriedades > aba Avançado**:
+   - **Wake on Magic Packet** = Ativado
+   - **Shutdown Wake-On-Lan** = Ativado (placas Realtek; em português pode aparecer como "Desligar Despertar Aquando de Lan")
+   - **Energy-Efficient Ethernet**, **Green Ethernet** e **Power Saving Mode** = Desativado, se existirem. Ligadas, elas apagam a luz da porta com o PC desligado.
+2. Na mesma janela, aba **Gerenciamento de Energia**: marque **Permitir que este dispositivo acorde o computador** e **Permitir apenas um magic packet...**.
+3. **Painel de Controle > Opções de Energia > Escolher a função dos botões de energia**: desmarque **Ligar inicialização rápida**.
+4. **Configurações > Rede e Internet > Ethernet**: marque **Rede privada**.
+
+**Pronto quando:** você desliga o PC e a **luz da porta de rede continua acesa**. Se apagar, o botão Ligar não vai funcionar: revise o 1a e o item 1 do 1b.
 
 ### 1c. Anotar IP e MAC (~2 min)
 
@@ -128,7 +134,12 @@ Tempo: ~10 minutos. Precisa do Flutter instalado (ele já traz o Dart).
 
 Tempo: ~2 minutos.
 
-1. Instale o app no celular (veja [Para desenvolvedores](#para-desenvolvedores)).
+1. Com o celular conectado no USB, instale e abra o app. Na pasta do projeto:
+
+   ```powershell
+   flutter run --release
+   ```
+
 2. Toque na **engrenagem** (canto superior direito).
 3. Preencha:
 
@@ -155,17 +166,26 @@ Ao tocar em **Ligar**, a tela mostra **"Ligando..."** até o Windows subir: de 3
 Teste na ordem:
 
 1. **Agente parado ou não instalado.** Rode `Get-ScheduledTask WolAgent`. Se der erro, refaça o Passo 2.
-2. **Rede do PC como Pública.** Mude para **Privada** (Passo 1b, item 3).
+2. **Rede do PC como Pública.** Mude para **Privada** (Passo 1b, item 4).
 3. **Token diferente no app e no PC.** Digite no app o mesmo token usado no `install.ps1`. Depois de 5 tokens errados, o agente bloqueia o celular por **1 minuto**: corrija o token e espere 1 minuto.
 4. **IP do PC mudou.** Rode `ipconfig` de novo e atualize no app.
 5. **Celular em outra rede** (4G, Wi-Fi de visitas). Conecte no Wi-Fi de casa.
 
 ### O botão Ligar não acorda o PC
 
+Primeiro, desligue o PC e olhe a **luz da porta de rede** atrás dele.
+
+Luz **apagada** (a placa de rede não está escutando):
+
+1. **BIOS:** Power On By PCI-E desligado ou ErP ligado. Refaça o Passo 1a.
+2. **Economia de energia da placa ligada.** Refaça o Passo 1b, item 1.
+3. **Inicialização Rápida ativa.** Refaça o Passo 1b, item 3.
+
+Luz **acesa** (a placa escuta, mas o sinal não chega):
+
 1. **PC no Wi-Fi.** Use cabo.
-2. **BIOS ou placa de rede sem Wake on LAN.** Refaça o Passo 1a e o item 1 do Passo 1b.
-3. **Inicialização Rápida ativa.** Refaça o Passo 1b, item 2.
-4. **Broadcast não chega.** No app, troque o broadcast para o final `.255` da sua rede (ex.: `192.168.1.255`).
+2. **MAC errado no app.** Confira com o `ipconfig /all` (Passo 1c).
+3. **Broadcast não chega.** No app, troque o broadcast para o final `.255` da sua rede (ex.: `192.168.1.255`).
 
 ### O build falha com "non-ASCII characters"
 
